@@ -4,7 +4,7 @@ from app.services.progress_service import get_recommended_topic, update_progress
 
 router = APIRouter(prefix="/progress", tags=["Progress"])
 
-@router.post("/save", response_model=ProgressResponse)
+@router.post("/update", response_model=ProgressResponse)
 def save_progress(data: ProgressUpdateRequest):
     return update_progress(
         user_id=data.user_id,
