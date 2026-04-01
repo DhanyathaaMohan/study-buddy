@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pymongo
+python-dotenv
+passlib
+python-jose
+email-validator
+requests
+groq
