@@ -114,16 +114,22 @@ export default function Dashboard() {
   }, []);
 
   const fetchUserProgress = async (uid: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/progress/${uid}`);
-      const data = await res.json();
-      if (res.ok) {
-        setProgressData(data);
-      }
-    } catch (err) {
-      console.error("Progress fetch error:", err);
+  try {
+    console.log("Fetching progress for user:", uid);
+
+    const res = await fetch(`${API_BASE}/progress/${uid}`);
+    const data = await res.json();
+
+    console.log("Progress API status:", res.status);
+    console.log("Progress API data:", data);
+
+    if (res.ok) {
+      setProgressData(data);
     }
-  };
+  } catch (err) {
+    console.error("Progress fetch error:", err);
+  }
+};
 
   const chartData = useMemo(() => {
     if (!progressData?.topics) return [];
@@ -393,90 +399,99 @@ export default function Dashboard() {
             </div>
           )}
 
-          {progressData?.topics?.length ? (
-            <div className="mt-5 bg-white/10 p-4 rounded-xl">
-              <h2 className="text-xl font-bold mb-3"> Your Learning Progress</h2>
+          {progressData ? (
+  <div className="mt-5 bg-white/10 p-4 rounded-xl">
+    <h2 className="text-xl font-bold mb-3">Your Learning Progress</h2>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-                <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-sm text-white/80">Total Topics</p>
-                  <p className="text-2xl font-bold">{progressData.total_topics}</p>
-                </div>
-                <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-sm text-white/80">Attempts</p>
-                  <p className="text-2xl font-bold">{progressData.total_attempts}</p>
-                </div>
-                <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-sm text-white/80">Average Score</p>
-                  <p className="text-2xl font-bold">{progressData.average_score}</p>
-                </div>
-                <div className="bg-white/10 p-3 rounded-lg">
-                  <p className="text-sm text-white/80">Strongest Topic</p>
-                  <p className="text-lg font-bold">
-                    {progressData.strongest_topic || "N/A"}
-                  </p>
-                </div>
+    {progressData.topics?.length > 0 ? (
+      <>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <div className="bg-white/10 p-3 rounded-lg">
+            <p className="text-sm text-white/80">Total Topics</p>
+            <p className="text-2xl font-bold">{progressData.total_topics}</p>
+          </div>
+          <div className="bg-white/10 p-3 rounded-lg">
+            <p className="text-sm text-white/80">Attempts</p>
+            <p className="text-2xl font-bold">{progressData.total_attempts}</p>
+          </div>
+          <div className="bg-white/10 p-3 rounded-lg">
+            <p className="text-sm text-white/80">Average Score</p>
+            <p className="text-2xl font-bold">{progressData.average_score}</p>
+          </div>
+          <div className="bg-white/10 p-3 rounded-lg">
+            <p className="text-sm text-white/80">Strongest Topic</p>
+            <p className="text-lg font-bold">
+              {progressData.strongest_topic || "N/A"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-5">
+          <div className="bg-white rounded-xl p-3 text-black">
+            <h3 className="font-semibold mb-3">Average Score by Topic</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="topic" />
+                  <YAxis domain={[0, 10]} />
+                  <Tooltip />
+                  <Bar dataKey="averageScore" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-3 text-black">
+            <h3 className="font-semibold mb-3">Latest Score Trend</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="topic" />
+                  <YAxis domain={[0, 10]} />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="lastScore"
+                    stroke="#ec4899"
+                    strokeWidth={3}
+                    dot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-3 max-h-56 overflow-y-auto">
+          {progressData.topics.map((item, index) => (
+            <div
+              key={index}
+              className="bg-white/10 p-3 rounded-lg flex justify-between items-center"
+            >
+              <div>
+                <p className="font-semibold">{item.topic}</p>
+                <p className="text-sm text-gray-200">
+                  Scores: {item.scores.join(", ")}
+                </p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-5">
-                <div className="bg-white rounded-xl p-3 text-black">
-                  <h3 className="font-semibold mb-3">Average Score by Topic</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="topic" />
-                        <YAxis domain={[0, 10]} />
-                        <Tooltip />
-                        <Bar dataKey="averageScore" radius={[8, 8, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl p-3 text-black">
-                  <h3 className="font-semibold mb-3">Latest Score Trend</h3>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={trendData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="topic" />
-                        <YAxis domain={[0, 10]} />
-                        <Tooltip />
-                        <Line
-                          type="monotone"
-                          dataKey="lastScore"
-                          strokeWidth={3}
-                          dot={{ r: 5 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 space-y-3 max-h-56 overflow-y-auto">
-                {progressData.topics.map((item, index) => (
-                  <div
-                    key={index}
-                    className="bg-white/10 p-3 rounded-lg flex justify-between items-center"
-                  >
-                    <div>
-                      <p className="font-semibold">{item.topic}</p>
-                      <p className="text-sm text-gray-200">
-                        Scores: {item.scores.join(", ")}
-                      </p>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-sm">Difficulty: {item.current_difficulty}</p>
-                      <p className="text-sm">Attempts: {item.attempts}</p>
-                    </div>
-                  </div>
-                ))}
+              <div className="text-right">
+                <p className="text-sm">Difficulty: {item.current_difficulty}</p>
+                <p className="text-sm">Attempts: {item.attempts}</p>
               </div>
             </div>
-          ) : null}
+          ))}
+        </div>
+      </>
+    ) : (
+      <p className="text-white/80">
+        No progress yet. Complete one quiz to see charts and topic history.
+      </p>
+    )}
+  </div>
+) : null}
 
           {stage === "setup" && (
             <div className="space-y-4 mt-5 animate-fadeIn">
