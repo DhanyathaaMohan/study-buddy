@@ -15,6 +15,7 @@ def fetch_youtube_videos(topic: str):
         "q": f"{topic} tutorial",
         "maxResults": 3,
         "type": "video",
+        "videoEmbeddable": "true",
         "key": API_KEY
     }
 

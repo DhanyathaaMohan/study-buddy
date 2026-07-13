@@ -770,58 +770,88 @@ export default function Dashboard() {
               </div>
             )}
 
-            {stage === "video" && video && (
+            {stage === "video" && (
               <div className="p-6 md:p-8 space-y-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-red-500/10 rounded-xl">
-                      <Play className="text-red-500 fill-red-500" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white">
-                        {video.title}
-                      </h3>
-                      <p className="text-sm text-slate-400">
-                        Curated Learning Content • {difficulty}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      onClick={goToQuiz}
-                      disabled={quizLoading}
-                      className="bg-emerald-600 hover:bg-emerald-500 px-8 py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {quizLoading ? "Generating..." : "Ready for Quiz?"}
-                    </button>
-
+                {!video || !video.url ? (
+                  <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-12 text-center space-y-4">
+                    <div className="text-5xl">📺</div>
+                    <h3 className="text-xl font-bold text-white font-syne">No videos available for this topic</h3>
+                    <p className="text-slate-400 max-w-md mx-auto">
+                      We couldn't find any learning tutorials for "{topic}" at this moment. Try entering a different keyword or topic.
+                    </p>
                     <button
                       onClick={resetFlow}
-                      className="px-5 py-3 rounded-xl border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-200 font-semibold"
+                      className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg active:scale-95"
                     >
-                      Change Topic
+                      Try Another Topic
                     </button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-red-500/10 rounded-xl">
+                          <Play className="text-red-500 fill-red-500" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-white">
+                            {video.title}
+                          </h3>
+                          <p className="text-sm text-slate-400">
+                            Curated Learning Content • {difficulty}
+                          </p>
+                        </div>
+                      </div>
 
-                <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-slate-900/50">
-                  <iframe
-                    className="w-full h-full"
-                    src={getEmbedUrl(video.url) || "https://www.youtube.com/embed/f2O6mQ1MEl8"}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    title={video.title}
-                  />
-                </div>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={goToQuiz}
+                          disabled={quizLoading}
+                          className="bg-emerald-600 hover:bg-emerald-500 px-8 py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {quizLoading ? "Generating..." : "Ready for Quiz?"}
+                        </button>
 
-                {recommendation?.reason && (
-                  <div className="glass rounded-2xl p-4">
-                    <p className="text-sm text-slate-400 leading-6">
-                      {recommendation.reason}
-                    </p>
-                  </div>
+                        <button
+                          onClick={resetFlow}
+                          className="px-5 py-3 rounded-xl border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-200 font-semibold"
+                        >
+                          Change Topic
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-slate-900/50">
+                      <iframe
+                        className="w-full h-full"
+                        src={getEmbedUrl(video.url) || "https://www.youtube.com/embed/f2O6mQ1MEl8"}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        title={video.title}
+                      />
+                    </div>
+
+                    <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 mt-2">
+                      {recommendation?.reason ? (
+                        <div className="glass rounded-2xl p-4 flex-1">
+                          <p className="text-sm text-slate-400 leading-6">
+                            {recommendation.reason}
+                          </p>
+                        </div>
+                      ) : <div className="flex-1" />}
+
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 hover:border-red-500/30 text-red-400 font-bold transition-all text-sm h-full whitespace-nowrap active:scale-95"
+                      >
+                        <Play className="w-4 h-4 fill-red-400" />
+                        Open in YouTube
+                      </a>
+                    </div>
+                  </>
                 )}
               </div>
             )}
