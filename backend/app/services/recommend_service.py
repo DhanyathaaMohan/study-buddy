@@ -48,7 +48,7 @@ FALLBACK_VIDEOS = {
     },
     "python": {
         "title": "Python for Beginners - Full Course",
-        "url": "https://www.youtube.com/watch?v=kqtD5eraMx8"
+        "url": "https://www.youtube.com/watch?v=_uQrJ0TkZlc"
     },
     "javascript": {
         "title": "JavaScript Tutorial for Beginners",
@@ -67,8 +67,8 @@ FALLBACK_VIDEOS = {
         "url": "https://www.youtube.com/watch?v=qH6yxkw0u78"
     },
     "default": {
-        "title": "How to Learn Anything Fast - Study Techniques",
-        "url": "https://www.youtube.com/watch?v=f2O6mQ1MEl8"
+        "title": "The Most Effective Study Technique - Active Recall",
+        "url": "https://www.youtube.com/watch?v=w6nS9QyX1oI"
     }
 }
 
