@@ -1,6 +1,9 @@
 import os
 import requests
 from dotenv import load_dotenv
+import json
+import re
+import urllib.parse
 
 load_dotenv()
 
@@ -8,37 +11,74 @@ API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 
 def fetch_youtube_videos(topic: str):
-    url = "https://www.googleapis.com/youtube/v3/search"
+    # 1. Try using the official API key if configured
+    if API_KEY and API_KEY.strip() and API_KEY != "YOUR_YOUTUBE_API_KEY_HERE":
+        try:
+            url = "https://www.googleapis.com/youtube/v3/search"
+            params = {
+                "part": "snippet",
+                "q": f"{topic} tutorial",
+                "maxResults": 3,
+                "type": "video",
+                "videoEmbeddable": "true",
+                "key": API_KEY
+            }
+            response = requests.get(url, params=params, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                videos = []
+                for item in data.get("items", []):
+                    video_id = item["id"]["videoId"]
+                    title = item["snippet"]["title"]
+                    videos.append({
+                        "title": title,
+                        "url": f"https://www.youtube.com/watch?v={video_id}"
+                    })
+                if videos:
+                    return videos
+            else:
+                print("[WARNING] YouTube API returned status:", response.status_code)
+        except Exception as e:
+            print("[WARNING] YouTube API call failed:", e)
 
-    params = {
-        "part": "snippet",
-        "q": f"{topic} tutorial",
-        "maxResults": 3,
-        "type": "video",
-        "videoEmbeddable": "true",
-        "key": API_KEY
-    }
+    # 2. Fall back to keyless search/scraping
+    try:
+        query = urllib.parse.quote(topic + " tutorial")
+        search_url = f"https://www.youtube.com/results?search_query={query}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        }
+        response = requests.get(search_url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            html = response.text
+            matches = re.findall(r'var ytInitialData = (\{.*?\});', html)
+            if matches:
+                data = json.loads(matches[0])
+                contents = data["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"]["sectionListRenderer"]["contents"]
+                videos = []
+                for content in contents:
+                    if "itemSectionRenderer" in content:
+                        items = content["itemSectionRenderer"]["contents"]
+                        for item in items:
+                            if "videoRenderer" in item:
+                                v = item["videoRenderer"]
+                                video_id = v.get("videoId")
+                                title = ""
+                                if "title" in v and "runs" in v["title"] and v["title"]["runs"]:
+                                    title = v["title"]["runs"][0].get("text", "")
+                                if video_id and title:
+                                    videos.append({
+                                        "title": title,
+                                        "url": f"https://www.youtube.com/watch?v={video_id}"
+                                    })
+                if videos:
+                    return videos
+    except Exception as e:
+        print("[WARNING] Keyless YouTube search failed:", e)
 
-    response = requests.get(url, params=params)
+    # 3. If both API and scraping fail, return empty to trigger local dictionary fallback
+    return []
 
-    if response.status_code != 200:
-        print("YouTube API error:", response.text)
-        return []
-
-    data = response.json()
-
-    videos = []
-
-    for item in data.get("items", []):
-        video_id = item["id"]["videoId"]
-        title = item["snippet"]["title"]
-
-        videos.append({
-            "title": title,
-            "url": f"https://www.youtube.com/watch?v={video_id}"
-        })
-
-    return videos
 
 
 FALLBACK_VIDEOS = {
