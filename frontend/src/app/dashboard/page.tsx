@@ -23,6 +23,7 @@ import {
   BrainCircuit,
   Settings,
   HelpCircle,
+  Info,
 } from "lucide-react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL!;
@@ -99,9 +100,7 @@ const ScoreBadge = ({ score }: { score: number }) => {
 export default function Dashboard() {
   const [topic, setTopic] = useState("");
   const [difficulty, setDifficulty] = useState("easy");
-  const [stage, setStage] = useState<"setup" | "video" | "quiz" | "result">(
-    "setup"
-  );
+  const [stage, setStage] = useState<"setup" | "video" | "quiz">("setup");
 
   const [video, setVideo] = useState<Video | null>(null);
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
@@ -129,6 +128,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [quizLoading, setQuizLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -178,9 +180,12 @@ export default function Dashboard() {
   }, [progressData]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+    const confirmLogout = window.confirm("Are you sure you want to log out?");
+    if (confirmLogout) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/login";
+    }
   };
 
   const resetFlow = () => {
@@ -190,6 +195,8 @@ export default function Dashboard() {
     setAnswers([]);
     setResult(null);
     setRecommendation(null);
+    setQuizSubmitted(false);
+    setShowAnswers(false);
   };
 
   const startLearning = async () => {
@@ -212,6 +219,8 @@ export default function Dashboard() {
       setResult(null);
       setQuiz([]);
       setAnswers([]);
+      setQuizSubmitted(false);
+      setShowAnswers(false);
       setStage("video");
     } catch (err) {
       console.error("Start learning error:", err);
@@ -232,6 +241,9 @@ export default function Dashboard() {
       const data = await res.json();
       setQuiz(data.questions || []);
       setAnswers(new Array((data.questions || []).length).fill(""));
+      setQuizSubmitted(false);
+      setShowAnswers(false);
+      setResult(null);
       setStage("quiz");
     } catch (err) {
       console.error("Quiz generation error:", err);
@@ -306,7 +318,7 @@ export default function Dashboard() {
       setRecommendation(recData);
       setVideo(recData.videos?.[0] || null);
       setDifficulty(data.next_difficulty);
-      setStage("result");
+      setQuizSubmitted(true);
     } catch (err) {
       console.error("Submit quiz error:", err);
       alert("Failed to evaluate quiz");
@@ -352,15 +364,33 @@ export default function Dashboard() {
     }
   };
 
+  const retryQuiz = () => {
+    setAnswers(new Array(quiz.length).fill(""));
+    setQuizSubmitted(false);
+    setShowAnswers(false);
+    setResult(null);
+    setStage("quiz");
+  };
+
   const getEmbedUrl = (url: string) => {
     if (!url) return null;
 
     try {
+      if (url.includes("youtube.com/embed/")) {
+        return url;
+      }
+
       const parsed = new URL(url);
 
       if (parsed.hostname.includes("youtube.com")) {
         const v = parsed.searchParams.get("v");
         if (v) return `https://www.youtube.com/embed/${v}`;
+
+        const paths = parsed.pathname.split("/");
+        const embedIndex = paths.indexOf("embed");
+        if (embedIndex !== -1 && paths[embedIndex + 1]) {
+          return `https://www.youtube.com/embed/${paths[embedIndex + 1]}`;
+        }
       }
 
       if (parsed.hostname.includes("youtu.be")) {
@@ -407,11 +437,17 @@ export default function Dashboard() {
             <BookOpen className="w-6 h-6 text-white" />
           </div>
 
-          <div className="flex flex-col gap-8 text-slate-500">
-            <Settings className="w-6 h-6 hover:text-indigo-400 cursor-pointer transition-colors" />
-            <HelpCircle className="w-6 h-6 hover:text-indigo-400 cursor-pointer transition-colors" />
+          <div className="flex flex-col gap-8 text-slate-500 items-center">
+            <Settings className="w-6 h-6 hover:text-indigo-400 cursor-pointer transition-colors" title="Settings" />
+            <HelpCircle className="w-6 h-6 hover:text-indigo-400 cursor-pointer transition-colors" title="Help" />
+            <Info
+              className="w-6 h-6 hover:text-indigo-400 cursor-pointer transition-colors"
+              title="About AI Study Buddy"
+              onClick={() => setShowAboutModal(true)}
+            />
             <LogOut
               className="w-6 h-6 hover:text-rose-500 cursor-pointer transition-colors"
+              title="Logout"
               onClick={handleLogout}
             />
           </div>
@@ -448,34 +484,7 @@ export default function Dashboard() {
             </div>
           </header>
 
-          {aiSuggestion?.recommended_topic && (
-            <section className="glass p-1 rounded-3xl bg-gradient-to-r from-indigo-500/20 to-purple-500/20 transition-all hover:scale-[1.01]">
-              <div className="bg-[#0f172a]/80 backdrop-blur-xl p-6 rounded-[22px] flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-3xl shrink-0">
-                  🧠
-                </div>
 
-                <div className="flex-1 text-center md:text-left">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
-                    AI Recommendation
-                  </span>
-                  <h3 className="text-xl font-bold text-white mt-1">
-                    {aiSuggestion.recommended_topic}
-                  </h3>
-                  <p className="text-sm text-slate-400 mt-1 italic opacity-80">
-                    "{aiSuggestion.reason}"
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setTopic(aiSuggestion.recommended_topic)}
-                  className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
-                >
-                  Use Topic
-                </button>
-              </div>
-            </section>
-          )}
 
           {progressData && (
             <section className="space-y-6">
@@ -796,31 +805,16 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {getEmbedUrl(video.url) ? (
-                  <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/5">
-                    <iframe
-                      className="w-full h-full"
-                      src={getEmbedUrl(video.url)!}
-                      allowFullScreen
-                      title={video.title}
-                    />
-                  </div>
-                ) : (
-                  <div className="rounded-3xl border border-white/5 bg-slate-900/50 p-8 text-center space-y-4">
-                    <p className="text-slate-300">
-                      This video can’t be embedded here.
-                    </p>
-                    <a
-                      href={video.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold"
-                    >
-                      <Play className="w-4 h-4 fill-white" />
-                      Open Video
-                    </a>
-                  </div>
-                )}
+                <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-slate-900/50">
+                  <iframe
+                    className="w-full h-full"
+                    src={getEmbedUrl(video.url) || "https://www.youtube.com/embed/f2O6mQ1MEl8"}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    title={video.title}
+                  />
+                </div>
 
                 {recommendation?.reason && (
                   <div className="glass rounded-2xl p-4">
@@ -864,12 +858,13 @@ export default function Dashboard() {
                           return (
                             <button
                               key={`${idx}-${optionIndex}`}
-                              onClick={() => handleSelect(idx, opt)}
+                              onClick={() => !quizSubmitted && handleSelect(idx, opt)}
+                              disabled={quizSubmitted}
                               className={`text-left p-4 rounded-xl border transition-all text-sm font-medium ${
                                 isSelected
                                   ? "bg-indigo-600/20 border-indigo-500 text-indigo-300"
                                   : "bg-slate-900 border-white/5 text-slate-400 hover:bg-slate-800"
-                              }`}
+                              } ${quizSubmitted ? "cursor-not-allowed opacity-60" : ""}`}
                             >
                               {opt}
                             </button>
@@ -881,114 +876,156 @@ export default function Dashboard() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={submitQuiz}
-                    disabled={submitLoading}
-                    className="flex-1 bg-indigo-600 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  >
-                    {submitLoading ? (
-                      <RefreshCw className="animate-spin" />
-                    ) : (
-                      "Submit All Answers"
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setStage("video")}
-                    className="px-6 py-4 rounded-2xl border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-200 font-semibold"
-                  >
-                    Back to Video
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {stage === "result" && result && (
-              <div className="p-10 text-center space-y-8">
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 rounded-full" />
-                  <div
-                    className="relative bg-slate-900 border-4 w-32 h-32 md:w-40 md:h-40 rounded-full flex flex-col items-center justify-center mx-auto shadow-2xl"
-                    style={{
-                      borderColor:
-                        result.score >= 7
-                          ? "#22d3a5"
-                          : result.score >= 4
-                          ? "#f59e42"
-                          : "#f43f5e",
-                    }}
-                  >
-                    <span className="text-4xl md:text-5xl font-syne font-black text-white">
-                      {result.score}
-                    </span>
-                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">
-                      Score / 10
-                    </span>
-                  </div>
-                </div>
-
-                <div className="max-w-lg mx-auto space-y-4">
-                  <h3 className="text-2xl font-bold text-white font-syne">
-                    Great Work!
-                  </h3>
-
-                  <div className="flex items-center justify-center gap-3 flex-wrap">
-                    <span className="text-slate-400 text-sm">
-                      Next difficulty:
-                    </span>
-                    <span
-                      className="px-3 py-1 rounded-full text-xs font-bold border capitalize"
-                      style={{
-                        color:
-                          difficultyColor[result.next_difficulty] || "#94a3b8",
-                        borderColor: `${
-                          difficultyColor[result.next_difficulty] || "#94a3b8"
-                        }40`,
-                        background: `${
-                          difficultyColor[result.next_difficulty] || "#94a3b8"
-                        }15`,
-                      }}
+                  {!quizSubmitted && (
+                    <button
+                      onClick={submitQuiz}
+                      disabled={submitLoading}
+                      className="flex-1 bg-indigo-600 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     >
-                      {result.next_difficulty}
-                    </span>
-                  </div>
+                      {submitLoading ? (
+                        <RefreshCw className="animate-spin" />
+                      ) : (
+                        "Submit Quiz"
+                      )}
+                    </button>
+                  )}
 
-                  <p className="text-slate-400 leading-relaxed font-medium">
-                    {result.feedback}
-                  </p>
-
-                  {recommendation?.reason && (
-                    <p className="text-sm text-slate-500 leading-6">
-                      {recommendation.reason}
-                    </p>
+                  {!quizSubmitted && (
+                    <button
+                      onClick={() => setStage("video")}
+                      className="px-6 py-4 rounded-2xl border border-white/10 bg-slate-900/60 hover:bg-slate-800 text-slate-200 font-semibold text-center"
+                    >
+                      Back to Video
+                    </button>
                   )}
                 </div>
 
-                {video && (
-                  <div className="max-w-xl mx-auto text-left glass rounded-3xl p-5">
-                    <p className="text-[11px] uppercase tracking-widest font-bold text-emerald-400 mb-2">
-                      Up Next
+                {quizSubmitted && result && (
+                  <div className="bg-slate-900/80 border border-white/10 rounded-[32px] p-8 text-center space-y-6 mt-6 shadow-2xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-5 rounded-full pointer-events-none" />
+                    
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest">
+                        Quiz Completed!
+                      </span>
+                      <h3 className="text-3xl font-syne font-black text-white">
+                        Your Score: {result.score} / 10
+                      </h3>
+                      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-950 text-sm font-semibold border border-white/10">
+                        Status:{" "}
+                        <span className={result.score >= 5 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                          {result.score >= 5 ? "PASSED" : "FAILED"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-300 max-w-lg mx-auto font-medium leading-relaxed">
+                      {result.feedback}
                     </p>
-                    <p className="text-white font-semibold">{video.title}</p>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                      <button
+                        onClick={retryQuiz}
+                        className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white border border-white/10 rounded-2xl font-bold transition-all w-full sm:w-auto flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Retry Quiz
+                      </button>
+
+                      <button
+                        onClick={() => setShowAnswers(!showAnswers)}
+                        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-bold transition-all w-full sm:w-auto shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        <BookOpen className="w-4 h-4" />
+                        {showAnswers ? "Hide Answers" : "View Answers"}
+                      </button>
+                      
+                      <button
+                        onClick={resetFlow}
+                        className="px-8 py-4 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white rounded-2xl font-bold transition-all w-full sm:w-auto border border-white/5 active:scale-95"
+                      >
+                        New Topic
+                      </button>
+                    </div>
+
+                    {showAnswers && (
+                      <div className="text-left space-y-6 mt-8 border-t border-white/10 pt-6">
+                        <h4 className="text-lg font-syne font-bold text-white mb-2">
+                          Detailed Review
+                        </h4>
+
+                        <div className="space-y-4">
+                          {quiz.map((q, idx) => {
+                            const userAnswerKey = answers[idx]; // "A", "B", "C", "D"
+                            const correctAnswerKey = q.answer; // "A", "B", "C", "D"
+                            const isCorrect = userAnswerKey === correctAnswerKey;
+
+                            return (
+                              <div
+                                key={idx}
+                                className={`rounded-2xl border p-5 space-y-3 transition-all ${
+                                  isCorrect
+                                    ? "bg-emerald-500/5 border-emerald-500/10"
+                                    : "bg-rose-500/5 border-rose-500/10"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-start gap-3">
+                                    <span
+                                      className={`mt-1 flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
+                                        isCorrect
+                                          ? "bg-emerald-500/25 text-emerald-400"
+                                          : "bg-rose-500/25 text-rose-400"
+                                      }`}
+                                    >
+                                      {idx + 1}
+                                    </span>
+                                    <p className="font-semibold text-slate-200 text-base">
+                                      {q.question}
+                                    </p>
+                                  </div>
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                                      isCorrect
+                                        ? "bg-emerald-500/10 text-emerald-400"
+                                        : "bg-rose-500/10 text-rose-400"
+                                    }`}
+                                  >
+                                    {isCorrect ? "Correct" : "Incorrect"}
+                                  </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                  {q.options.map((opt, optIdx) => {
+                                    const optLetter = opt[0].toUpperCase();
+                                    const isUserSelection = userAnswerKey === optLetter;
+                                    const isCorrectOption = correctAnswerKey === optLetter;
+
+                                    let optStyle = "bg-slate-950/40 border-white/5 text-slate-400";
+                                    if (isCorrectOption) {
+                                      optStyle = "bg-emerald-500/10 border-emerald-500/30 text-emerald-300 font-semibold";
+                                    } else if (isUserSelection && !isCorrect) {
+                                      optStyle = "bg-rose-500/10 border-rose-500/30 text-rose-300 font-semibold";
+                                    }
+
+                                    return (
+                                      <div
+                                        key={optIdx}
+                                        className={`p-3 rounded-xl border text-sm ${optStyle}`}
+                                      >
+                                        {opt}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <button
-                    onClick={() => setStage("video")}
-                    className="px-8 py-4 glass rounded-2xl font-bold hover:bg-white/10 transition-all w-full sm:w-auto flex items-center justify-center gap-2"
-                  >
-                    <Play className="w-4 h-4" />
-                    Next Video
-                  </button>
-
-                  <button
-                    onClick={resetFlow}
-                    className="px-8 py-4 bg-indigo-600 rounded-2xl font-bold hover:bg-indigo-500 transition-all w-full sm:w-auto shadow-lg shadow-indigo-500/20"
-                  >
-                    New Topic
-                  </button>
-                </div>
               </div>
             )}
           </section>
@@ -1061,6 +1098,87 @@ export default function Dashboard() {
           </div>
         </aside>
       </div>
+
+      {showAboutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-all animate-fadeIn">
+          <div className="bg-slate-900 border border-white/10 rounded-[32px] max-w-2xl w-full p-8 shadow-2xl space-y-6 relative overflow-hidden text-slate-200">
+            <div className="absolute inset-0 bg-indigo-500/5 blur-3xl rounded-full pointer-events-none" />
+            
+            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                  <Info size={20} />
+                </div>
+                <h3 className="text-2xl font-syne font-bold text-white">
+                  About AI Study Buddy
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowAboutModal(false)}
+                className="text-slate-400 hover:text-white transition-colors text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
+              <div className="space-y-3">
+                <h4 className="font-bold text-white text-base">🚀 Platform Features</h4>
+                <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <li className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <span className="font-semibold text-indigo-300 text-sm">🎥 Curated Video Lessons</span>
+                    <p className="text-xs text-slate-400">Watch high-quality, fully embedded educational videos directly inside the workspace.</p>
+                  </li>
+                  <li className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <span className="font-semibold text-indigo-300 text-sm">📝 Adaptive Quizzes</span>
+                    <p className="text-xs text-slate-400">Challenge yourself with dynamic quizzes that automatically adjust difficulty based on your score.</p>
+                  </li>
+                  <li className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <span className="font-semibold text-indigo-300 text-sm">💬 AI Coach</span>
+                    <p className="text-xs text-slate-400">Chat with a dedicated AI tutor to ask questions, explain code, or brainstorm concepts.</p>
+                  </li>
+                  <li className="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <span className="font-semibold text-indigo-300 text-sm">📊 Performance Analytics</span>
+                    <p className="text-xs text-slate-400">Track and visualize your study sessions, difficulty levels, and concept mastery curves.</p>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-3 border-t border-white/5 pt-4">
+                <h4 className="font-bold text-white text-base">📈 Understanding the Charts</h4>
+                <div className="space-y-3">
+                  <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <span className="font-semibold text-purple-300 text-sm flex items-center gap-1.5">
+                      <TrendingUp size={16} /> Learning Curve Graph
+                    </span>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      The Learning Curve plots your recent quiz scores over time. An upward-trending curve indicates increasing topic mastery and knowledge retention. Steady performance at higher difficulties signifies complete subject command.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 bg-white/[0.02] border border-white/5 rounded-xl space-y-1">
+                    <span className="font-semibold text-purple-300 text-sm flex items-center gap-1.5">
+                      <BookOpen size={16} /> Engagement (Active Topics & Sessions)
+                    </span>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      This represents your study patterns. Total Sessions records each time you run a study flow. Engagement by Topic counts your total quiz attempts and difficulty transitions per topic, identifying focus areas and habit consistency.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/5 pt-4 flex justify-end">
+              <button
+                onClick={() => setShowAboutModal(false)}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-95 text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
