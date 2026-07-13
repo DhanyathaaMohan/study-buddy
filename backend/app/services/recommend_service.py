@@ -67,8 +67,8 @@ FALLBACK_VIDEOS = {
         "url": "https://www.youtube.com/watch?v=qH6yxkw0u78"
     },
     "default": {
-        "title": "The Most Effective Study Technique - Active Recall",
-        "url": "https://www.youtube.com/watch?v=w6nS9QyX1oI"
+        "title": "How my friend ranked 1st at Medical School - Active Recall Framework",
+        "url": "https://www.youtube.com/watch?v=fDbxPVn02VU"
     }
 }
 

@@ -824,7 +824,7 @@ export default function Dashboard() {
                     <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl border border-white/5 bg-slate-900/50">
                       <iframe
                         className="w-full h-full"
-                        src={getEmbedUrl(video.url) || "https://www.youtube.com/embed/w6nS9QyX1oI"}
+                        src={getEmbedUrl(video.url) || "https://www.youtube.com/embed/fDbxPVn02VU"}
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
